@@ -22,15 +22,15 @@
             <tbody>
                 {% for item in cart_items %}
                 <tr>
-                    <td><a href="{% url 'product_detail' item.product.slug %}" class="fw-semibold text-decoration-none">{{ item.product.name }}</a>{% if item.quantity > item.product.stock %}<div class="small text-danger mt-1">Only {{ item.product.stock }} left</div>{% endif %}</td>
+                    <td>{% if item.product.is_active %}<a href="{% url 'product_detail' item.product.slug %}" class="fw-semibold text-decoration-none">{{ item.product.name }}</a>{% else %}<span class="fw-semibold">{{ item.product.name }}</span><div class="small text-danger mt-1">No longer available</div>{% endif %}{% if item.product.is_active and item.quantity > item.product.stock %}<div class="small text-danger mt-1">Only {{ item.product.stock }} left</div>{% endif %}</td>
                     <td>₹{{ item.product.price|floatformat:2 }}</td>
                     <td>
-                        <form class="d-flex gap-2" method="post" action="{% url 'update_cart' item.id %}">
+                        {% if item.product.is_active and item.product.stock > 0 %}<form class="d-flex gap-2" method="post" action="{% url 'update_cart' item.id %}">
                             {% csrf_token %}
                             <label class="visually-hidden" for="quantity-{{ item.id }}">Quantity for {{ item.product.name }}</label>
                             <input class="form-control form-control-sm" id="quantity-{{ item.id }}" type="number" name="quantity" min="1" max="{{ item.product.stock }}" value="{{ item.quantity }}" style="width:76px" required>
                             <button class="btn btn-sm btn-outline-dark" type="submit">Update</button>
-                        </form>
+                        </form>{% else %}<span class="small text-danger">Unavailable</span>{% endif %}
                     </td>
                     <td>₹{{ item.total_price|floatformat:2 }}</td>
                     <td><form method="post" action="{% url 'remove_from_cart' item.id %}">{% csrf_token %}<button class="btn btn-sm btn-link text-danger p-0" type="submit">Remove</button></form></td>
@@ -46,7 +46,7 @@
             <h2 class="h5 mb-4">Order summary</h2>
             <div class="d-flex justify-content-between border-bottom pb-3 mb-3"><span>Subtotal</span><strong>₹{{ total_price|floatformat:2 }}</strong></div>
             <p class="small text-secondary">Delivery and payment details are confirmed separately. This demo does not process online payments.</p>
-            <a href="{% url 'checkout' %}" class="btn btn-dark w-100 py-2">Continue to checkout</a>
+            {% if has_unavailable_items %}<button class="btn btn-dark w-100 py-2" type="button" disabled>Fix your bag to continue</button>{% else %}<a href="{% url 'checkout' %}" class="btn btn-dark w-100 py-2">Continue to checkout</a>{% endif %}
             <a href="{% url 'product_list' %}" class="text-center small mt-3 text-decoration-none">Continue shopping</a>
         </div>
     </aside>

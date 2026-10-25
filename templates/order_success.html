@@ -7,6 +7,7 @@
     <h1 class="display-title mb-3">Thank you.</h1>
     <p>Request <strong>#{{ order.id }}</strong> is recorded. This demo does not process online payments, so this is not a payment confirmation.</p>
     <p>Total: <strong>₹{{ order.total_price|floatformat:2 }}</strong></p>
+    {% if order.shipping_line1 %}<p class="mx-auto" style="max-width:26rem"><strong>Delivery address</strong><br>{{ order.shipping_line1 }}{% if order.shipping_line2 %}<br>{{ order.shipping_line2 }}{% endif %}<br>{{ order.shipping_city }}, {{ order.shipping_state }} {{ order.shipping_zip_code }}</p>{% endif %}
     <a href="{% url 'my_orders' %}" class="btn btn-dark mt-3">View My Orders</a>
     <a href="{% url 'home' %}" class="btn btn-outline-dark mt-3">Continue Shopping</a>
 </div>

@@ -4,24 +4,31 @@
 
 {% block content %}
 
-<section class="row align-items-center g-0 overflow-hidden rounded-2 mb-5" style="background:#e8e2d4;">
-    <div class="col-lg-6 p-4 p-md-5">
-        <p class="text-uppercase small fw-semibold mb-3" style="letter-spacing:.12em;color:#42583d;">Govind Attire</p>
-        <h1 class="display-title display-4 mb-3">Style, made for every day.</h1>
-        <p class="text-secondary mb-4">Find your next favourite piece in the collection.</p>
-        <a href="{% url 'product_list' %}" class="btn btn-dark px-4 py-2">Shop the collection</a>
+{% with hero_product=products|first %}
+<section class="store-hero" aria-labelledby="store-hero-title">
+    <div class="store-hero-copy">
+        <p class="store-eyebrow"><span aria-hidden="true"></span> Clothing · Beauty · Accessories</p>
+        <h1 id="store-hero-title">Find your own kind of <em>style.</em></h1>
+        <p>Explore a considered collection of clothing, beauty and accessories, and find pieces that feel like you.</p>
+        <a href="{% url 'product_list' %}" class="store-button">Shop the collection <span aria-hidden="true">↗</span></a>
+        <div class="store-proof"><span>Clothing</span><span>Beauty</span><span>Accessories</span></div>
     </div>
-    <div class="col-lg-6">
-        <img src="https://images.unsplash.com/photo-1521334884684-d80222895322?auto=format&fit=crop&w=1400&q=85"
-             class="d-block w-100" style="height:clamp(260px, 38vw, 430px);object-fit:cover;" alt="A considered fashion collection" fetchpriority="high">
+    <div class="store-hero-art">
+        {% if hero_product and hero_product.image_url %}
+        <img src="{{ hero_product.image_url }}" alt="{{ hero_product.name }}" fetchpriority="high">
+        {% else %}
+        <div class="store-art-fallback" aria-hidden="true"><span>शृंगार</span><i></i></div>
+        {% endif %}
+        <div class="store-art-caption"><span>Chosen for your everyday</span><span>01 / 03</span></div>
     </div>
 </section>
+{% endwith %}
 
 
 <!-- FEATURED PRODUCTS -->
-<div class="d-flex align-items-end justify-content-between my-4">
-    <div><p class="text-uppercase small fw-semibold mb-1" style="letter-spacing:.1em;color:#42583d;">The edit</p><h2 class="display-title mb-0">Featured pieces</h2></div>
-    <a href="{% url 'product_list' %}" class="text-decoration-none">View all <span aria-hidden="true">→</span></a>
+<div class="store-section-heading">
+    <div><p class="store-eyebrow">The current edit</p><h2 class="display-title mb-0">Pieces to love.</h2></div>
+    <a href="{% url 'product_list' %}" class="store-text-link">Explore the collection <span aria-hidden="true">↗</span></a>
 </div>
 
 <div class="row">
@@ -50,7 +57,7 @@
 
 
 <!-- CATEGORIES -->
-<div class="my-5"><p class="text-uppercase small fw-semibold mb-1" style="letter-spacing:.1em;color:#42583d;">Explore</p><h2 class="display-title mb-4">Shop by category</h2>
+<div class="store-categories my-5"><p class="store-eyebrow">Find your detail</p><h2 class="display-title mb-4">Shop by category.</h2>
 
 <div class="row text-center mb-5">
     {% for category in categories %}

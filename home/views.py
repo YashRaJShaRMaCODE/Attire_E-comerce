@@ -128,7 +128,15 @@ def user_logout(request):
 def cart(request):
     cart_items = CartItem.objects.filter(user=request.user).select_related("product")
     total_price = sum((item.total_price for item in cart_items), Decimal("0"))
-    return render(request, "cart.html", {"cart_items": cart_items, "total_price": total_price})
+    has_unavailable_items = any(
+        not item.product.is_active or item.quantity > item.product.stock
+        for item in cart_items
+    )
+    return render(request, "cart.html", {
+        "cart_items": cart_items,
+        "total_price": total_price,
+        "has_unavailable_items": has_unavailable_items,
+    })
 
 
 @login_required
@@ -180,9 +188,12 @@ def remove_from_cart(request, item_id):
 
 @login_required
 def checkout(request):
-    cart_items = CartItem.objects.filter(user=request.user).select_related("product")
-    if not cart_items.exists():
+    cart_items = list(CartItem.objects.filter(user=request.user).select_related("product"))
+    if not cart_items:
         messages.error(request, "Your cart is empty.")
+        return redirect("cart")
+    if any(not item.product.is_active or item.quantity > item.product.stock for item in cart_items):
+        messages.error(request, "An item in your bag is unavailable or has less stock now. Review your bag before checkout.")
         return redirect("cart")
 
     total_price = sum((item.total_price for item in cart_items), Decimal("0"))
@@ -239,7 +250,16 @@ def place_order(request):
             total_price = sum(
                 (item.price * item.quantity for item in order_items), Decimal("0")
             )
-            order = Order.objects.create(user=request.user, address=address, total_price=total_price)
+            order = Order.objects.create(
+                user=request.user,
+                address=address,
+                shipping_line1=address.line1,
+                shipping_line2=address.line2,
+                shipping_city=address.city,
+                shipping_state=address.state,
+                shipping_zip_code=address.zip_code,
+                total_price=total_price,
+            )
             OrderItem.objects.bulk_create([
                 OrderItem(order=order, **{
                     "product": item.product,

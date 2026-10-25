@@ -19,7 +19,9 @@
                         <td>#{{ order.id }}</td>
                         <td>{{ order.created_at|date:"Y-m-d" }}</td>
                         <td>
-                            {% if order.status == "delivered" %}
+                            {% if order.status == "requested" %}
+                            <span class="badge bg-info text-dark">Request received</span>
+                            {% elif order.status == "delivered" %}
                             <span class="badge bg-success">Delivered</span>
                             {% elif order.status == "cancelled" %}
                             <span class="badge bg-danger">Cancelled</span>

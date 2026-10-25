@@ -58,6 +58,28 @@ class StoreFlowTests(TestCase):
         item.refresh_from_db()
         self.assertEqual(item.quantity, 1)
 
+    def test_checkout_returns_to_bag_when_stock_is_no_longer_available(self):
+        CartItem.objects.create(user=self.user, product=self.product, quantity=2)
+        self.product.stock = 1
+        self.product.save(update_fields=["stock"])
+
+        response = self.client.get(reverse("checkout"))
+
+        self.assertRedirects(response, reverse("cart"))
+        self.assertContains(self.client.get(reverse("cart")), "Fix your bag to continue")
+
+    def test_checkout_returns_to_bag_when_a_product_was_deactivated(self):
+        CartItem.objects.create(user=self.user, product=self.product)
+        self.product.is_active = False
+        self.product.save(update_fields=["is_active"])
+
+        response = self.client.get(reverse("checkout"))
+
+        self.assertRedirects(response, reverse("cart"))
+        cart_response = self.client.get(reverse("cart"))
+        self.assertContains(cart_response, "No longer available")
+        self.assertNotContains(cart_response, "Continue to checkout")
+
     def test_order_requires_an_address_owned_by_the_customer(self):
         CartItem.objects.create(user=self.user, product=self.product)
         other_user = User.objects.create_user(username="another", password="strong-test-password")
@@ -85,7 +107,21 @@ class StoreFlowTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertEqual(response.url, reverse("order_success", args=[order.id]))
         self.assertEqual(order.total_price, Decimal("2998.00"))
+        self.assertEqual(order.status, "requested")
+        self.assertEqual(order.get_status_display(), "Request received")
         self.assertEqual(OrderItem.objects.get(order=order).product_name, "Linen shirt")
+        self.assertEqual(order.shipping_line1, self.address.line1)
+        self.assertEqual(order.shipping_zip_code, self.address.zip_code)
+        self.address.line1 = "Changed after checkout"
+        self.address.save(update_fields=["line1"])
+        self.address.delete()
+        order.refresh_from_db()
+        self.assertIsNone(order.address)
+        self.assertEqual(order.shipping_line1, "12 Market Road")
+        self.assertContains(
+            self.client.get(reverse("order_success", args=[order.id])),
+            "12 Market Road",
+        )
         self.product.refresh_from_db()
         self.assertEqual(self.product.stock, 1)
         self.assertFalse(CartItem.objects.filter(user=self.user).exists())

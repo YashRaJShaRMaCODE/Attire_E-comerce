@@ -6,6 +6,8 @@ Django storefront prototype with product browsing, customer accounts, a database
 
 Checkout records an order request and reserves available stock. It does **not** collect payment, calculate delivery charges or taxes, send order emails, or handle refunds and cancellations. Do not accept live orders until those business flows and a supported production database are configured.
 
+Each order keeps a snapshot of the delivery address used at checkout, so later edits or deletion of a saved address do not change the order record. Define and enforce an order-data retention policy before launch.
+
 The project uses SQLite for local development. SQLite does not provide the row-level locks used by the order flow. Configure PostgreSQL before handling concurrent live orders; set `DJANGO_DB_ENGINE=django.db.backends.postgresql` and provide `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, and `DB_PORT`. Connections require TLS by default. See Django’s [`select_for_update()` documentation](https://docs.djangoproject.com/en/6.1/ref/models/querysets/#select-for-update).
 
 ## Local setup
