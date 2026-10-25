@@ -1,43 +1,52 @@
 {% extends "base.html" %}
-{% block title %}Shop - Govind Attire{% endblock %}
+{% block title %}Shop the collection - Govind Attire{% endblock %}
 
 {% block content %}
-<div class="row mb-4">
-    <div class="col-md-3">
-        <h5 class="fw-bold">Categories</h5>
+<div class="catalog-layout">
+    <aside class="catalog-sidebar" aria-label="Product categories">
+        <h2 class="h6 fw-semibold mb-3">Browse</h2>
         <ul class="list-group">
-            <li class="list-group-item {% if not request.GET.category %}active{% endif %}">
-                <a class="text-decoration-none {% if not request.GET.category %}text-white{% endif %}" href="{% url 'product_list' %}">All</a>
+            <li class="list-group-item {% if not selected_category %}active{% endif %}">
+                <a class="text-decoration-none {% if not selected_category %}text-white{% endif %}" href="{% url 'product_list' %}{% if query %}?q={{ query|urlencode }}{% endif %}">All pieces</a>
             </li>
             {% for category in categories %}
-            <li class="list-group-item {% if request.GET.category == category.slug %}active{% endif %}">
-                <a class="text-decoration-none {% if request.GET.category == category.slug %}text-white{% endif %}" href="?category={{ category.slug }}">{{ category.name }}</a>
+            <li class="list-group-item {% if selected_category == category.slug %}active{% endif %}">
+                <a class="text-decoration-none {% if selected_category == category.slug %}text-white{% endif %}" href="?category={{ category.slug }}{% if query %}&q={{ query|urlencode }}{% endif %}">{{ category.name }}</a>
             </li>
             {% endfor %}
         </ul>
-    </div>
+    </aside>
 
-    <div class="col-md-9">
-        <h2 class="fw-bold mb-4">Shop</h2>
-        <div class="row">
-            {% for product in products %}
-            <div class="col-md-4 mb-4">
-                <div class="card shadow-sm h-100">
-                    {% if product.image_url %}
-                    <img src="{{ product.image_url }}" class="card-img-top" style="height:250px; object-fit:cover;">
-                    {% endif %}
-                    <div class="card-body text-center">
-                        <h5>{{ product.name }}</h5>
-                        <p>₹{{ product.price }}</p>
-                        <a href="{% url 'product_detail' product.slug %}" class="btn btn-outline-dark me-2">View</a>
-                        <a href="{% url 'add_to_cart' product.id %}" class="btn btn-dark">Add to Cart</a>
-                    </div>
-                </div>
-            </div>
-            {% empty %}
-            <p>No products found.</p>
-            {% endfor %}
+    <section aria-labelledby="catalog-title">
+        <div class="catalog-heading d-flex align-items-end justify-content-between gap-3">
+            <div><p class="text-uppercase small fw-semibold mb-1" style="letter-spacing:.1em;color:#42583d;">The collection</p><h1 class="display-title h2 mb-0" id="catalog-title">{% if query %}Search results{% else %}Shop all pieces{% endif %}</h1></div>
+            <span class="stock-note">{{ page.paginator.count }} piece{{ page.paginator.count|pluralize }}</span>
         </div>
-    </div>
+        <div class="row g-4">
+            {% for product in products %}
+            <div class="col-sm-6 col-xl-4">
+                <article class="card product-card">
+                    {% if product.image_url %}<img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }}" loading="lazy">{% endif %}
+                    <div class="card-body text-center">
+                        <a class="product-name text-decoration-none" href="{% url 'product_detail' product.slug %}">{{ product.name }}</a>
+                        <p class="product-price">₹{{ product.price|floatformat:2 }}</p>
+                        {% if product.stock > 0 %}
+                            {% if user.is_authenticated %}
+                            <form method="post" action="{% url 'add_to_cart' product.id %}">{% csrf_token %}<button type="submit" class="btn btn-dark px-4">Add to bag</button></form>
+                            {% else %}<a href="{% url 'login' %}" class="btn btn-outline-dark px-4">Sign in to add</a>{% endif %}
+                        {% else %}<span class="stock-note">Currently unavailable</span>{% endif %}
+                    </div>
+                </article>
+            </div>
+            {% empty %}<p class="text-secondary">No pieces match this search. Try a different word or browse all items.</p>{% endfor %}
+        </div>
+        {% if page.has_other_pages %}
+        <nav class="d-flex justify-content-between align-items-center mt-4" aria-label="Product pages">
+            {% if page.has_previous %}<a class="btn btn-outline-dark" href="?page={{ page.previous_page_number }}{% if selected_category %}&category={{ selected_category|urlencode }}{% endif %}{% if query %}&q={{ query|urlencode }}{% endif %}">Previous</a>{% else %}<span></span>{% endif %}
+            <span class="stock-note">Page {{ page.number }} of {{ page.paginator.num_pages }}</span>
+            {% if page.has_next %}<a class="btn btn-outline-dark" href="?page={{ page.next_page_number }}{% if selected_category %}&category={{ selected_category|urlencode }}{% endif %}{% if query %}&q={{ query|urlencode }}{% endif %}">Next</a>{% else %}<span></span>{% endif %}
+        </nav>
+        {% endif %}
+    </section>
 </div>
 {% endblock %}

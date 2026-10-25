@@ -1,59 +1,15 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>{% block title %}Govind Attire{% endblock %}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="Explore the latest collection at Govind Attire.">
+    <meta name="theme-color" content="#f7f5f0">
 
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-
-    <!-- Google Font -->
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f8f9fa;
-        }
-
-        .navbar {
-            background: white;
-        }
-
-        .navbar-brand {
-            font-weight: 700;
-            letter-spacing: 1px;
-        }
-
-        .nav-link {
-            font-weight: 500;
-        }
-
-        .nav-link:hover {
-            color: #0d6efd !important;
-        }
-
-        .dropdown-menu {
-            border-radius: 10px;
-        }
-
-        footer {
-            background: #111;
-            color: white;
-            padding: 40px 0;
-            margin-top: 60px;
-        }
-
-        footer a {
-            color: #ccc;
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            color: white;
-        }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+    <link href="{% static 'site.css' %}" rel="stylesheet">
 </head>
 
 <body>
@@ -66,7 +22,7 @@
         <a class="navbar-brand" href="{% url 'home' %}">Govind Attire</a>
 
         <!-- Toggle -->
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar">
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar" aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
             <span class="navbar-toggler-icon"></span>
         </button>
 
@@ -95,9 +51,10 @@
             </ul>
 
             <!-- Search -->
-            <form class="d-flex ms-auto me-3" method="GET" action="">
-                <input class="form-control me-2" type="search" name="q" placeholder="Search products">
-                <button class="btn btn-outline-primary">Search</button>
+            <form class="d-flex ms-auto me-3 nav-search" method="GET" action="{% url 'product_list' %}" role="search">
+                <label class="visually-hidden" for="nav-search">Search products</label>
+                <input class="form-control me-2" id="nav-search" type="search" name="q" placeholder="Search the collection" value="{{ request.GET.q|default:'' }}">
+                <button class="btn btn-outline-dark" type="submit">Search</button>
             </form>
 
             <!-- Auth / Account -->
@@ -145,11 +102,7 @@
             </a>
         </li>
         <li><hr class="dropdown-divider"></li>
-        <li>
-            <a class="dropdown-item" href="{% url 'logout' %}">
-                Log Out
-            </a>
-        </li>
+        <li><form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="dropdown-item" type="submit">Log out</button></form></li>
     </ul>
 </li>
                 {% else %}
@@ -173,25 +126,31 @@
 
 
 <!-- MAIN CONTENT -->
-<main class="container mt-5">
+<main class="container store-main">
+    {% if messages %}
+        <div class="store-messages" aria-live="polite">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags|default:'info' }}" role="status">{{ message }}</div>
+            {% endfor %}
+        </div>
+    {% endif %}
     {% block content %}
     {% endblock %}
 </main>
 
 
 <!-- FOOTER -->
-<footer>
+<footer class="store-footer">
     <div class="container text-center">
         <h5 class="fw-bold mb-3">Govind Attire</h5>
-        <p>Premium Fashion for Modern India</p>
-        <p class="mt-3 mb-1">© 2026 Govind Attire. All Rights Reserved.</p>
-        <small>Built with ❤️ by Yash Raj Sharma</small>
+        <p>Everyday pieces, chosen with care.</p>
+        <p class="mt-3 mb-1">© {% now "Y" %} Govind Attire.</p>
     </div>
 </footer>
 
 
 <!-- Bootstrap JS -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
 
 </body>
 </html>

@@ -20,13 +20,13 @@
                             Account Settings
                         </li>
                         <li class="list-group-item">
-                            <a href="#" class="text-decoration-none">My Orders</a>
+                            <a href="{% url 'my_orders' %}" class="text-decoration-none">My Orders</a>
                         </li>
                         <li class="list-group-item">
-                            <a href="#" class="text-decoration-none">Saved Addresses</a>
+                            <a href="{% url 'saved_addresses' %}" class="text-decoration-none">Saved Addresses</a>
                         </li>
                         <li class="list-group-item text-danger">
-                            <a href="{% url 'logout' %}" class="text-danger text-decoration-none">Logout</a>
+                            <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button class="btn btn-link text-danger p-0 text-decoration-none" type="submit">Logout</button></form>
                         </li>
                     </ul>
                 </div>
@@ -42,81 +42,21 @@
                 <div class="card-body">
                     <h4 class="fw-bold mb-4">Change Password</h4>
 
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert {% if 'incorrect' in message.message or 'match' in message.message or 'empty' in message.message %}alert-danger{% else %}alert-success{% endif %}">{{ message }}</div>
-                        {% endfor %}
-                    {% endif %}
-
                     <form method="POST">
                         {% csrf_token %}
-
-                        <div class="mb-3">
-                            <label class="form-label">Current Password</label>
-                            <input type="password" class="form-control" name="old_password" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">New Password</label>
-                            <input type="password" class="form-control" name="new_password1" required>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label">Confirm New Password</label>
-                            <input type="password" class="form-control" name="new_password2" required>
-                        </div>
-
-                        <button type="submit" class="btn btn-dark px-4">
-                            Update Password
-                        </button>
+                        {{ form.non_field_errors }}
+                        {% for field in form %}
+                            <div class="mb-3">
+                                <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                                {{ field }}
+                                {{ field.errors }}
+                            </div>
+                        {% endfor %}
+                        <button type="submit" class="btn btn-dark px-4">Update Password</button>
                     </form>
                 </div>
             </div>
 
-
-            <!-- Notification Preferences -->
-            <div class="card shadow-sm mb-4">
-                <div class="card-body">
-                    <h4 class="fw-bold mb-4">Notification Preferences</h4>
-
-                    <form>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="emailNotify" checked>
-                            <label class="form-check-label" for="emailNotify">
-                                Receive Email Notifications
-                            </label>
-                        </div>
-
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="checkbox" id="smsNotify">
-                            <label class="form-check-label" for="smsNotify">
-                                Receive SMS Alerts
-                            </label>
-                        </div>
-
-                        <button class="btn btn-outline-dark mt-3">
-                            Save Preferences
-                        </button>
-                    </form>
-                </div>
-            </div>
-
-
-            <!-- Danger Zone -->
-            <div class="card shadow-sm border-danger">
-                <div class="card-body">
-                    <h4 class="fw-bold text-danger mb-3">Danger Zone</h4>
-
-                    <p class="text-muted">
-                        Deleting your account will permanently remove all your data,
-                        including orders and saved addresses.
-                    </p>
-
-                    <button class="btn btn-danger">
-                        Delete My Account
-                    </button>
-                </div>
-            </div>
 
         </div>
 

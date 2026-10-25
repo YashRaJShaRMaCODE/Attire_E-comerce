@@ -2,39 +2,61 @@
 {% block title %}Cart - Govind Attire{% endblock title %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1 class="mb-4">Your Shopping Cart</h1>
+<div class="row g-4 align-items-start">
+    <div class="col-lg-8">
+        <p class="text-uppercase small fw-semibold mb-1" style="letter-spacing:.1em;color:#42583d;">Your selection</p>
+        <h1 class="display-title mb-4">Your bag</h1>
 
-    {% if cart_items %}
-        <table class="table table-bordered">
+        {% if cart_items %}
+        <div class="table-responsive">
+        <table class="table align-middle">
             <thead>
                 <tr>
-                    <th>Product</th>
-                    <th>Price</th>
-                    <th>Quantity</th>
-                    <th>Total</th>
+                    <th scope="col">Piece</th>
+                    <th scope="col">Price</th>
+                    <th scope="col">Quantity</th>
+                    <th scope="col">Subtotal</th>
+                    <th scope="col"><span class="visually-hidden">Actions</span></th>
                 </tr>
             </thead>
             <tbody>
                 {% for item in cart_items %}
                 <tr>
-                    <td>{{ item.product.name }}</td>
-                    <td>${{ item.product.price }}</td>
-                    <td>{{ item.quantity }}</td>
-                    <td>${{ item.total_price }}</td>
+                    <td><a href="{% url 'product_detail' item.product.slug %}" class="fw-semibold text-decoration-none">{{ item.product.name }}</a>{% if item.quantity > item.product.stock %}<div class="small text-danger mt-1">Only {{ item.product.stock }} left</div>{% endif %}</td>
+                    <td>₹{{ item.product.price|floatformat:2 }}</td>
+                    <td>
+                        <form class="d-flex gap-2" method="post" action="{% url 'update_cart' item.id %}">
+                            {% csrf_token %}
+                            <label class="visually-hidden" for="quantity-{{ item.id }}">Quantity for {{ item.product.name }}</label>
+                            <input class="form-control form-control-sm" id="quantity-{{ item.id }}" type="number" name="quantity" min="1" max="{{ item.product.stock }}" value="{{ item.quantity }}" style="width:76px" required>
+                            <button class="btn btn-sm btn-outline-dark" type="submit">Update</button>
+                        </form>
+                    </td>
+                    <td>₹{{ item.total_price|floatformat:2 }}</td>
+                    <td><form method="post" action="{% url 'remove_from_cart' item.id %}">{% csrf_token %}<button class="btn btn-sm btn-link text-danger p-0" type="submit">Remove</button></form></td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
-
-        <div class="text-end">
-            <h4>Total: ${{ total_price }}</h4>
-            <a href="{% url 'checkout' %}" class="btn btn-primary">Proceed to Checkout</a>
         </div>
+    </div>
+
+    <aside class="col-lg-4">
+        <div class="card p-3 p-md-4">
+            <h2 class="h5 mb-4">Order summary</h2>
+            <div class="d-flex justify-content-between border-bottom pb-3 mb-3"><span>Subtotal</span><strong>₹{{ total_price|floatformat:2 }}</strong></div>
+            <p class="small text-secondary">Delivery and payment details are confirmed separately. This demo does not process online payments.</p>
+            <a href="{% url 'checkout' %}" class="btn btn-dark w-100 py-2">Continue to checkout</a>
+            <a href="{% url 'product_list' %}" class="text-center small mt-3 text-decoration-none">Continue shopping</a>
+        </div>
+    </aside>
 
     {% else %}
-        <p>Your cart is empty. Start shopping now!</p>
-        <a href="{% url 'home' %}" class="btn btn-primary">Shop Now</a>
+        <div class="card p-4 p-md-5 text-center">
+            <h2 class="display-title">Your bag is waiting.</h2>
+            <p class="text-secondary">Explore the collection and add a piece you love.</p>
+            <a href="{% url 'product_list' %}" class="btn btn-dark px-4 mx-auto">Shop the collection</a>
+        </div>
     {% endif %}
 </div>
 {% endblock content %}

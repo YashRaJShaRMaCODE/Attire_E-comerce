@@ -1,158 +1,52 @@
-# Attire E-commerce (Django)
+# Govind Attire Store
 
-A clean starter e-commerce web application built with Django, focused on essential storefront pages, account pages, contact/feedback capture, and admin visibility.
+Django storefront prototype with product browsing, customer accounts, a database-backed bag, saved addresses, and order requests.
 
-## ✨ Highlights
+## Current checkout limits
 
-- Django-powered web app with a modular app structure (`basic` project + `home` app).
-- Ready-made storefront and informational pages (Home, About, Services, Cart, etc.).
-- Authentication flow with login/logout using Django auth.
-- Contact and feedback forms persisted to the database.
-- Admin panel configured and customized with branded titles.
-- SQLite default setup for fast local development.
+Checkout records an order request and reserves available stock. It does **not** collect payment, calculate delivery charges or taxes, send order emails, or handle refunds and cancellations. Do not accept live orders until those business flows and a supported production database are configured.
 
-## 🧰 Tech Stack
+The project uses SQLite for local development. SQLite does not provide the row-level locks used by the order flow. Configure PostgreSQL before handling concurrent live orders; set `DJANGO_DB_ENGINE=django.db.backends.postgresql` and provide `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `DB_HOST`, and `DB_PORT`. Connections require TLS by default. See Django’s [`select_for_update()` documentation](https://docs.djangoproject.com/en/6.1/ref/models/querysets/#select-for-update).
 
-- **Backend:** Django
-- **Language:** Python 3
-- **Database:** SQLite (default)
-- **Templates:** Django templates (HTML)
-- **Static assets:** Django static files via local `static/` directory
-
-## 📁 Project Structure
-
-```text
-Attire_E-coomerce/
-├── basic/                 # Django project config (settings, URLs, WSGI/ASGI)
-├── home/                  # Main app (views, models, routes)
-├── templates/             # Shared template files
-├── static/                # Static files
-├── db.sqlite3             # Local database (development)
-└── manage.py              # Django CLI entrypoint
-```
-
-## 🚀 Quick Start
-
-### 1) Clone and enter project
-
-```bash
-git clone <your-repo-url>
-cd Attire_E-coomerce
-```
-
-### 2) Create and activate virtual environment
+## Local setup
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate   # Linux/macOS
-# .venv\\Scripts\\activate    # Windows PowerShell
+# Windows PowerShell: .venv\Scripts\Activate.ps1
+# macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
 ```
 
-### 3) Install dependencies
+Copy `.env.example` to `.env`, generate a local key, and set `DJANGO_SECRET_KEY`:
 
 ```bash
-pip install django
+python -c "import secrets; print(secrets.token_urlsafe(50))"
 ```
 
-> If you add more dependencies, create a `requirements.txt` and install with `pip install -r requirements.txt`.
-
-### 4) Apply migrations
+The example enables `DJANGO_DEBUG` for local use. Never use that setting or a development secret in production. Then run:
 
 ```bash
-python manage.py makemigrations
 python manage.py migrate
-```
-
-### 5) Create admin user (optional but recommended)
-
-```bash
+python manage.py check
+python manage.py test home
 python manage.py createsuperuser
-```
-
-### 6) Run development server
-
-```bash
 python manage.py runserver
 ```
 
-Open: `http://127.0.0.1:8000/`
+Open `http://127.0.0.1:8000/`. Add categories and products in `/admin/`. Product image URLs should point to assets you own or are licensed to use; replace the sample hero photo before launch.
 
-## 🧭 Available Routes
+## Production setup
 
-| Route | Purpose |
-|---|---|
-| `/` | Home page |
-| `/about/` | About page |
-| `/services/` | Services page |
-| `/contact/` | Contact form |
-| `/feedback/` | Feedback form |
-| `/login/` | User login |
-| `/logout/` | User logout |
-| `/cart/` | Shopping cart page |
-| `/my-account/` | Account dashboard |
-| `/my-account/my-orders/` | Orders page |
-| `/my-account/settings/saved-addresses/` | Saved addresses |
-| `/settings/` | General settings page |
-| `/purchase-history/` | Purchase history |
-| `/admin/` | Django admin |
+- Use a generated `DJANGO_SECRET_KEY`, `DJANGO_DEBUG=false`, and exact `DJANGO_ALLOWED_HOSTS` values.
+- Run `python manage.py collectstatic --noinput` and serve the collected files from `STATIC_ROOT`.
+- Configure HTTPS at the hosting proxy. Set `SECURE_SSL_REDIRECT=true` only when the proxy reports HTTPS to Django correctly; enable HSTS only after verifying the full domain and its subdomains use HTTPS.
+- Configure PostgreSQL or MySQL, backups, monitoring, email delivery, and a payment provider before taking real orders.
+- Review privacy, consumer-protection, tax, delivery, cancellation, and refund requirements for the target market.
 
-## 🗃️ Data Models
+## Main routes
 
-### `Contact`
-Stores contact messages submitted from the contact page.
-
-Fields:
-- `name`
-- `email`
-- `message`
-
-### `Feedback`
-Stores feedback submitted from the feedback page.
-
-Fields:
-- `name`
-- `email`
-- `message`
-
-## 🔐 Authentication
-
-- Login uses Django's built-in authentication (`authenticate`, `login`).
-- Logout ends the session and redirects to the login page.
-- Invalid login attempts show an error message through Django messages.
-
-## 🛠️ Admin Configuration
-
-Admin branding is customized in `basic/urls.py`:
-
-- Site header: `UMSRA Admin`
-- Site title: `UMSRA Admin Portal`
-- Index title: `Welcome to UMSRA Researcher Portal`
-
-## ⚠️ Notes / Known Gaps
-
-- There are URL patterns for:
-  - `/my-account/settings/profile-setting/`
-  - `/my-account/settings/account-setting/`
-
-  These currently render template names `profile_setting.html` and `account_setting.html` in views, while existing template files are named `profile_settings.html` and `account_settings.html`. If those routes are used, they should be aligned to avoid `TemplateDoesNotExist`.
-
-- `DEBUG=True` and hardcoded secret key in `settings.py` are acceptable for local development but should be replaced for production.
-
-## 📌 Recommended Next Improvements
-
-1. Add `requirements.txt` with pinned versions.
-2. Add `.env` support for secret key and debug configuration.
-3. Add model-level timestamps (`created_at`) to `Contact` and `Feedback`.
-4. Add unit tests for form submission and auth views.
-5. Add CI (lint + tests) and deployment instructions.
-
-## 🤝 Contributing
-
-1. Fork and create a feature branch.
-2. Keep commits focused and descriptive.
-3. Run checks/tests locally before opening a PR.
-4. Submit a PR with clear summary and screenshots for UI changes.
-
-## 📄 License
-
-Set a project license (MIT/Apache-2.0/etc.) and update this section.
+- `/` and `/products/`: storefront and catalog
+- `/products/<slug>/`: product detail
+- `/cart/` and `/checkout/`: bag and order request
+- `/my-account/`: account and recent orders
+- `/admin/`: product and order management

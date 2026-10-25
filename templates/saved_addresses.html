@@ -3,12 +3,6 @@
 <div class="container my-5">
     <h2 class="mb-4">Saved Addresses</h2>
 
-    {% if messages %}
-        {% for message in messages %}
-            <div class="alert alert-success">{{ message }}</div>
-        {% endfor %}
-    {% endif %}
-
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <table class="table">
@@ -33,7 +27,7 @@
                         <td>{{ address.state }}</td>
                         <td>{{ address.zip_code }}</td>
                         <td>
-                            <a href="{% url 'delete_address' address.id %}" class="btn btn-sm btn-outline-danger">Delete</a>
+                            <form method="post" action="{% url 'delete_address' address.id %}">{% csrf_token %}<button type="submit" class="btn btn-sm btn-outline-danger">Delete</button></form>
                         </td>
                     </tr>
                     {% empty %}
@@ -49,31 +43,15 @@
             <h5 class="card-title mb-3">Add New Address</h5>
             <form method="POST">
                 {% csrf_token %}
+                {{ form.non_field_errors }}
                 <div class="row g-3">
+                    {% for field in form %}
                     <div class="col-md-4">
-                        <label class="form-label">Address Name</label>
-                        <input type="text" name="label" class="form-control" placeholder="Home / Work" required>
+                        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
+                        {{ field }}
+                        {{ field.errors }}
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Address Line 1</label>
-                        <input type="text" name="line1" class="form-control" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Address Line 2</label>
-                        <input type="text" name="line2" class="form-control">
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">City</label>
-                        <input type="text" name="city" class="form-control" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">State</label>
-                        <input type="text" name="state" class="form-control" required>
-                    </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Zip Code</label>
-                        <input type="text" name="zip_code" class="form-control" required>
-                    </div>
+                    {% endfor %}
                 </div>
                 <button type="submit" class="btn btn-dark mt-3">Save Address</button>
             </form>

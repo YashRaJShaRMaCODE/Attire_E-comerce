@@ -1,57 +1,45 @@
 {% extends "base.html" %}
 
-{% block title %}Home - Govind Attire{% endblock %}
+{% block title %}Govind Attire | Shop the collection{% endblock %}
 
 {% block content %}
 
-<!-- HERO CAROUSEL -->
-<div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
-    <div class="carousel-inner">
-
-        <div class="carousel-item active">
-            <img src="https://images.unsplash.com/photo-1521334884684-d80222895322"
-                 class="d-block w-100" style="height:500px; object-fit:cover;">
-        </div>
-
-        <div class="carousel-item">
-            <img src="https://images.unsplash.com/photo-1490481651871-ab68de25d43d"
-                 class="d-block w-100" style="height:500px; object-fit:cover;">
-        </div>
-
-        <div class="carousel-item">
-            <img src="https://images.unsplash.com/photo-1512436991641-6745cdb1723f"
-                 class="d-block w-100" style="height:500px; object-fit:cover;">
-        </div>
-
+<section class="row align-items-center g-0 overflow-hidden rounded-2 mb-5" style="background:#e8e2d4;">
+    <div class="col-lg-6 p-4 p-md-5">
+        <p class="text-uppercase small fw-semibold mb-3" style="letter-spacing:.12em;color:#42583d;">Govind Attire</p>
+        <h1 class="display-title display-4 mb-3">Style, made for every day.</h1>
+        <p class="text-secondary mb-4">Find your next favourite piece in the collection.</p>
+        <a href="{% url 'product_list' %}" class="btn btn-dark px-4 py-2">Shop the collection</a>
     </div>
-
-    <button class="carousel-control-prev" type="button"
-            data-bs-target="#carouselExample" data-bs-slide="prev">
-        <span class="carousel-control-prev-icon"></span>
-    </button>
-
-    <button class="carousel-control-next" type="button"
-            data-bs-target="#carouselExample" data-bs-slide="next">
-        <span class="carousel-control-next-icon"></span>
-    </button>
-</div>
+    <div class="col-lg-6">
+        <img src="https://images.unsplash.com/photo-1521334884684-d80222895322?auto=format&fit=crop&w=1400&q=85"
+             class="d-block w-100" style="height:clamp(260px, 38vw, 430px);object-fit:cover;" alt="A considered fashion collection" fetchpriority="high">
+    </div>
+</section>
 
 
 <!-- FEATURED PRODUCTS -->
-<h2 class="text-center my-5 fw-bold">Featured Products</h2>
+<div class="d-flex align-items-end justify-content-between my-4">
+    <div><p class="text-uppercase small fw-semibold mb-1" style="letter-spacing:.1em;color:#42583d;">The edit</p><h2 class="display-title mb-0">Featured pieces</h2></div>
+    <a href="{% url 'product_list' %}" class="text-decoration-none">View all <span aria-hidden="true">→</span></a>
+</div>
 
 <div class="row">
     {% for product in products %}
     <div class="col-md-4 mb-4">
-        <div class="card shadow-sm">
+        <div class="card product-card">
             {% if product.image_url %}
             <img src="{{ product.image_url }}"
-                 class="card-img-top" style="height:250px; object-fit:cover;">
+                 class="card-img-top" alt="{{ product.name }}" loading="lazy">
             {% endif %}
             <div class="card-body text-center">
-                <h5>{{ product.name }}</h5>
-                <p>₹{{ product.price }}</p>
-                <a href="{% url 'add_to_cart' product.id %}" class="btn btn-dark">Add to Cart</a>
+                <a class="product-name text-decoration-none" href="{% url 'product_detail' product.slug %}">{{ product.name }}</a>
+                <p class="product-price">₹{{ product.price|floatformat:2 }}</p>
+                {% if product.stock > 0 %}
+                    {% if user.is_authenticated %}
+                    <form method="post" action="{% url 'add_to_cart' product.id %}">{% csrf_token %}<button type="submit" class="btn btn-dark px-4">Add to bag</button></form>
+                    {% else %}<a href="{% url 'login' %}" class="btn btn-outline-dark px-4">Sign in to add</a>{% endif %}
+                {% else %}<span class="stock-note">Currently unavailable</span>{% endif %}
             </div>
         </div>
     </div>
@@ -62,28 +50,21 @@
 
 
 <!-- CATEGORIES -->
-<h2 class="text-center my-5 fw-bold">Shop By Category</h2>
+<div class="my-5"><p class="text-uppercase small fw-semibold mb-1" style="letter-spacing:.1em;color:#42583d;">Explore</p><h2 class="display-title mb-4">Shop by category</h2>
 
 <div class="row text-center mb-5">
     {% for category in categories %}
     <div class="col-md-4 mb-4">
         <a href="{% url 'product_list' %}?category={{ category.slug }}" class="text-decoration-none text-dark">
-            <div class="p-4 border rounded shadow-sm">
+            <div class="category-tile p-4">
                 <h4>{{ category.name }}</h4>
             </div>
         </a>
     </div>
     {% empty %}
-    <div class="col-md-4">
-        <div class="p-4 border rounded shadow-sm"><h4>Men</h4></div>
-    </div>
-    <div class="col-md-4">
-        <div class="p-4 border rounded shadow-sm"><h4>Women</h4></div>
-    </div>
-    <div class="col-md-4">
-        <div class="p-4 border rounded shadow-sm"><h4>Kids</h4></div>
-    </div>
+    <p class="text-secondary">Categories will appear as the collection is added.</p>
     {% endfor %}
+</div>
 </div>
 
 {% endblock %}

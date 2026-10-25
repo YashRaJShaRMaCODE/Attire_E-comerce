@@ -2,22 +2,25 @@
 {% block title %}{{ product.name }} - Govind Attire{% endblock %}
 
 {% block content %}
-<div class="row">
-    <div class="col-md-5">
-        {% if product.image_url %}
-        <img src="{{ product.image_url }}" class="img-fluid rounded shadow-sm">
-        {% endif %}
+<nav aria-label="Breadcrumb" class="small text-secondary mb-4"><a href="{% url 'product_list' %}" class="text-decoration-none">Shop</a> <span aria-hidden="true">/</span> {{ product.name }}</nav>
+<div class="row g-4 g-lg-5 align-items-start">
+    <div class="col-md-6">
+        {% if product.image_url %}<img src="{{ product.image_url }}" class="product-image rounded" alt="{{ product.name }}" fetchpriority="high">
+        {% else %}<div class="product-image-placeholder rounded" role="img" aria-label="No product image available">Image coming soon</div>{% endif %}
     </div>
-    <div class="col-md-7">
-        <h2 class="fw-bold">{{ product.name }}</h2>
-        {% if product.category %}<p class="text-muted">{{ product.category.name }}</p>{% endif %}
-        <h4 class="mb-3">₹{{ product.price }}</h4>
-        <p>{{ product.description }}</p>
+    <div class="col-md-6 pt-md-4">
+        {% if product.category %}<p class="text-uppercase small fw-semibold mb-2" style="letter-spacing:.1em;color:#42583d;">{{ product.category.name }}</p>{% endif %}
+        <h1 class="display-title mb-3">{{ product.name }}</h1>
+        <p class="product-price fs-5 mb-4">₹{{ product.price|floatformat:2 }}</p>
+        {% if product.description %}<div class="text-secondary lh-lg mb-4">{{ product.description|linebreaksbr }}</div>{% endif %}
 
         {% if product.stock > 0 %}
-        <a href="{% url 'add_to_cart' product.id %}" class="btn btn-dark px-4">Add to Cart</a>
+        <p class="stock-note mb-3">{{ product.stock }} available</p>
+            {% if user.is_authenticated %}
+            <form method="post" action="{% url 'add_to_cart' product.id %}">{% csrf_token %}<button type="submit" class="btn btn-dark px-4 py-2">Add to bag</button></form>
+            {% else %}<a href="{% url 'login' %}" class="btn btn-dark px-4 py-2">Sign in to add</a>{% endif %}
         {% else %}
-        <button class="btn btn-secondary px-4" disabled>Out of Stock</button>
+        <button class="btn btn-secondary px-4" disabled>Currently unavailable</button>
         {% endif %}
     </div>
 </div>

@@ -3,9 +3,11 @@ from decimal import Decimal
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout, update_session_auth_hash
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.forms import UserCreationForm
-from django.contrib.auth.models import User
-from django.db import IntegrityError
+from django.contrib.auth.forms import PasswordChangeForm, UserCreationForm
+from django.core.paginator import Paginator
+from django.db import transaction
+from django.db.models import F, Q
+from django.views.decorators.http import require_POST
 from django.shortcuts import get_object_or_404, redirect, render
 
 from home.models import (
@@ -18,6 +20,7 @@ from home.models import (
     OrderItem,
     Product,
 )
+from home.forms import AddressForm, ProfileForm
 
 
 def index(request):
@@ -36,17 +39,24 @@ def services(request):
 
 
 def product_list(request):
-    products = Product.objects.filter(is_active=True)
-    category_slug = request.GET.get("category")
-    query = request.GET.get("q")
+    products = Product.objects.filter(is_active=True).select_related("category").order_by("name", "id")
+    category_slug = request.GET.get("category", "")[:120]
+    query = request.GET.get("q", "").strip()[:100]
 
     if category_slug:
         products = products.filter(category__slug=category_slug)
     if query:
-        products = products.filter(name__icontains=query)
+        products = products.filter(Q(name__icontains=query) | Q(description__icontains=query))
 
     categories = Category.objects.all()
-    return render(request, "product_list.html", {"products": products, "categories": categories})
+    page = Paginator(products, 12).get_page(request.GET.get("page"))
+    return render(request, "product_list.html", {
+        "page": page,
+        "products": page.object_list,
+        "categories": categories,
+        "query": query,
+        "selected_category": category_slug or "",
+    })
 
 
 def product_detail(request, slug):
@@ -108,6 +118,7 @@ def user_login(request):
     return render(request, "login.html")
 
 
+@require_POST
 def user_logout(request):
     logout(request)
     return redirect("login")
@@ -121,35 +132,45 @@ def cart(request):
 
 
 @login_required
+@require_POST
 def add_to_cart(request, product_id):
-    product = get_object_or_404(Product, id=product_id, is_active=True)
-    cart_item, created = CartItem.objects.get_or_create(user=request.user, product=product)
-    if not created:
-        cart_item.quantity += 1
-        cart_item.save()
-    messages.success(request, f"{product.name} added to cart.")
+    with transaction.atomic():
+        product = get_object_or_404(Product.objects.select_for_update(), id=product_id, is_active=True)
+        if product.stock < 1:
+            messages.error(request, "This item is out of stock.")
+            return redirect("product_detail", slug=product.slug)
+        cart_item, created = CartItem.objects.get_or_create(user=request.user, product=product)
+        if not created and cart_item.quantity >= product.stock:
+            messages.error(request, "Your cart already has all available stock.")
+        else:
+            if not created:
+                cart_item.quantity += 1
+                cart_item.save(update_fields=["quantity"])
+            messages.success(request, f"{product.name} added to your bag.")
     return redirect("cart")
 
 
 @login_required
+@require_POST
 def update_cart(request, item_id):
     cart_item = get_object_or_404(CartItem, id=item_id, user=request.user)
-    if request.method == "POST":
-        try:
-            quantity = int(request.POST.get("quantity", 1))
-        except ValueError:
-            quantity = 1
+    try:
+        quantity = int(request.POST.get("quantity", ""))
+    except ValueError:
+        quantity = 0
 
-        if quantity < 1:
-            cart_item.delete()
-        else:
-            cart_item.quantity = quantity
-            cart_item.save()
+    if quantity < 1 or quantity > cart_item.product.stock:
+        messages.error(request, "Choose a quantity within the available stock.")
+    else:
+        cart_item.quantity = quantity
+        cart_item.save(update_fields=["quantity"])
+        messages.success(request, "Bag updated.")
 
     return redirect("cart")
 
 
 @login_required
+@require_POST
 def remove_from_cart(request, item_id):
     cart_item = get_object_or_404(CartItem, id=item_id, user=request.user)
     cart_item.delete()
@@ -170,32 +191,70 @@ def checkout(request):
 
 
 @login_required
+@require_POST
 def place_order(request):
-    if request.method != "POST":
+    try:
+        address_id = int(request.POST.get("address", ""))
+    except (TypeError, ValueError):
+        address_id = 0
+    if not Address.objects.filter(id=address_id, user=request.user).exists():
+        messages.error(request, "Choose one of your saved addresses to continue.")
         return redirect("checkout")
 
-    cart_items = CartItem.objects.filter(user=request.user).select_related("product")
-    if not cart_items.exists():
-        messages.error(request, "Your cart is empty.")
+    try:
+        with transaction.atomic():
+            address = Address.objects.select_for_update().get(id=address_id, user=request.user)
+            cart_items = list(
+                CartItem.objects.select_for_update()
+                .filter(user=request.user)
+                .order_by("id")
+            )
+            if not cart_items:
+                messages.error(request, "Your bag is empty.")
+                return redirect("cart")
+
+            products = {
+                product.id: product
+                for product in Product.objects.select_for_update()
+                .filter(id__in=[item.product_id for item in cart_items])
+                .order_by("id")
+            }
+            order_items = []
+            for item in cart_items:
+                product = products.get(item.product_id)
+                if not product or not product.is_active:
+                    raise ValueError
+                updated = Product.objects.filter(
+                    id=product.id, is_active=True, stock__gte=item.quantity
+                ).update(stock=F("stock") - item.quantity)
+                if not updated:
+                    raise ValueError
+                order_items.append(OrderItem(
+                    product=product,
+                    product_name=product.name,
+                    price=product.price,
+                    quantity=item.quantity,
+                ))
+
+            total_price = sum(
+                (item.price * item.quantity for item in order_items), Decimal("0")
+            )
+            order = Order.objects.create(user=request.user, address=address, total_price=total_price)
+            OrderItem.objects.bulk_create([
+                OrderItem(order=order, **{
+                    "product": item.product,
+                    "product_name": item.product_name,
+                    "price": item.price,
+                    "quantity": item.quantity,
+                })
+                for item in order_items
+            ])
+            CartItem.objects.filter(user=request.user).delete()
+    except ValueError:
+        messages.error(request, "An item changed or sold out. Review your bag and try again.")
         return redirect("cart")
 
-    address_id = request.POST.get("address")
-    address = Address.objects.filter(id=address_id, user=request.user).first() if address_id else None
-
-    total_price = sum((item.total_price for item in cart_items), Decimal("0"))
-    order = Order.objects.create(user=request.user, address=address, total_price=total_price)
-
-    for item in cart_items:
-        OrderItem.objects.create(
-            order=order,
-            product=item.product,
-            product_name=item.product.name,
-            price=item.product.price,
-            quantity=item.quantity,
-        )
-
-    cart_items.delete()
-    messages.success(request, "Your order has been placed successfully!")
+    messages.success(request, "Your order request has been recorded.")
     return redirect("order_success", order_id=order.id)
 
 
@@ -213,39 +272,28 @@ def my_account(request):
 
 @login_required
 def profile_settings(request):
-    if request.method == "POST":
-        user = request.user
-        user.first_name = request.POST.get("first_name", "")
-        user.email = request.POST.get("email", "")
-        user.save()
+    form = ProfileForm(request.POST or None, instance=request.user)
+    if request.method == "POST" and form.is_valid():
+        form.save()
         messages.success(request, "Profile updated successfully.")
         return redirect("profile_settings")
 
-    return render(request, "profile_settings.html")
+    return render(request, "profile_settings.html", {"form": form})
 
 
 @login_required
 def account_settings(request):
-    if request.method == "POST":
-        old_password = request.POST.get("old_password")
-        new_password1 = request.POST.get("new_password1")
-        new_password2 = request.POST.get("new_password2")
-
-        user = authenticate(request, username=request.user.username, password=old_password)
-        if user is None:
-            messages.error(request, "Current password is incorrect.")
-        elif new_password1 != new_password2:
-            messages.error(request, "New passwords do not match.")
-        elif not new_password1:
-            messages.error(request, "New password cannot be empty.")
-        else:
-            user.set_password(new_password1)
-            user.save()
-            update_session_auth_hash(request, user)
-            messages.success(request, "Password updated successfully.")
+    form = PasswordChangeForm(user=request.user, data=request.POST or None)
+    for name, field in form.fields.items():
+        field.widget.attrs["class"] = "form-control"
+        field.widget.attrs["autocomplete"] = "current-password" if name == "old_password" else "new-password"
+    if request.method == "POST" and form.is_valid():
+        user = form.save()
+        update_session_auth_hash(request, user)
+        messages.success(request, "Password updated successfully.")
         return redirect("account_settings")
 
-    return render(request, "account_settings.html")
+    return render(request, "account_settings.html", {"form": form})
 
 
 @login_required
@@ -262,24 +310,20 @@ def purchase_history(request):
 
 @login_required
 def saved_addresses(request):
-    if request.method == "POST":
-        Address.objects.create(
-            user=request.user,
-            label=request.POST.get("label", "Home"),
-            line1=request.POST.get("line1", ""),
-            line2=request.POST.get("line2", ""),
-            city=request.POST.get("city", ""),
-            state=request.POST.get("state", ""),
-            zip_code=request.POST.get("zip_code", ""),
-        )
+    form = AddressForm(request.POST or None)
+    if request.method == "POST" and form.is_valid():
+        address = form.save(commit=False)
+        address.user = request.user
+        address.save()
         messages.success(request, "Address saved.")
         return redirect("saved_addresses")
 
     addresses = Address.objects.filter(user=request.user)
-    return render(request, "saved_addresses.html", {"addresses": addresses})
+    return render(request, "saved_addresses.html", {"addresses": addresses, "form": form})
 
 
 @login_required
+@require_POST
 def delete_address(request, address_id):
     address = get_object_or_404(Address, id=address_id, user=request.user)
     address.delete()

@@ -42,63 +42,24 @@
 
                     <h4 class="fw-bold mb-4">Profile Information</h4>
 
-                    {% if messages %}
-                        {% for message in messages %}
-                            <div class="alert alert-success">{{ message }}</div>
-                        {% endfor %}
-                    {% endif %}
-
-                    <form method="POST" enctype="multipart/form-data">
+                    <form method="POST">
                         {% csrf_token %}
-
-                        <div class="row">
-
-                            <!-- Profile Image -->
-                            <div class="col-md-4 text-center mb-4">
-                                <img src="https://via.placeholder.com/150"
-                                     class="rounded-circle mb-3"
-                                     style="width:150px; height:150px; object-fit:cover;">
-
-                                <div>
-                                    <input type="file" class="form-control">
-                                </div>
-                            </div>
-
-                            <!-- User Info -->
-                            <div class="col-md-8">
-
-                                <div class="mb-3">
-                                    <label class="form-label">Full Name</label>
-                                    <input type="text" name="first_name" class="form-control"
-                                           value="{{ request.user.get_full_name }}">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Username</label>
-                                    <input type="text" class="form-control"
-                                           value="{{ request.user.username }}" readonly>
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Email Address</label>
-                                    <input type="email" name="email" class="form-control"
-                                           value="{{ request.user.email }}">
-                                </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label">Phone Number</label>
-                                    <input type="text" class="form-control"
-                                           placeholder="Enter phone number">
-                                </div>
-
-                                <button type="submit" class="btn btn-dark px-4">
-                                    Update Profile
-                                </button>
-
-                            </div>
-
+                        {{ form.non_field_errors }}
+                        <div class="mb-3">
+                            <label class="form-label" for="id_first_name">First name</label>
+                            {{ form.first_name }}
+                            {{ form.first_name.errors }}
                         </div>
-
+                        <div class="mb-3">
+                            <label class="form-label" for="id_email">Email address</label>
+                            {{ form.email }}
+                            {{ form.email.errors }}
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" class="form-control" value="{{ request.user.username }}" readonly>
+                        </div>
+                        <button type="submit" class="btn btn-dark px-4">Update Profile</button>
                     </form>
 
                 </div>
